@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd apps/listings-site/listings-plattform && pnpm install && pnpm build",
+  "outputDirectory": "apps/listings-site/listings-plattform/.next",
+  "installCommand": "pnpm install",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/ReservationDashboard/:path*",
+      "destination": "https://your-reservation-dashboard.vercel.app/ReservationDashboard/:path*"
+    }
+  ]
+}

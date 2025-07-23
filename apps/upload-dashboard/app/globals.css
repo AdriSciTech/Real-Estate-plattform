@@ -1,0 +1,76 @@
+/*my-app\app\globals.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-inter);
+  }
+
+  /* Enhanced focus states for better accessibility */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    @apply ring-2 ring-blue-500/20 ring-offset-2 outline-none;
+  }
+}
+
+@layer components {
+  /* Property card hover effects */
+  .property-card {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .property-card:hover {
+    @apply -translate-y-1 shadow-xl;
+  }
+
+  /* Image upload area styling */
+  .image-upload-area {
+    @apply border-2 border-dashed border-gray-300 transition-colors duration-200;
+  }
+
+  .image-upload-area:hover {
+    @apply border-blue-500;
+  }
+
+  /* Custom button class instead of global styles */
+  .btn-animated {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .btn-animated:hover {
+    @apply -translate-y-0.5;
+  }
+  
+  .btn-animated:active {
+    @apply translate-y-0;
+  }
+}
+
+@layer utilities {
+  /* Custom scrollbar - only if not using Tailwind's scrollbar plugin */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Only include if you need more than 3 lines */
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

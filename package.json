@@ -1,0 +1,27 @@
+{
+  "name": "rental-plattform",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:listings": "cd apps/listings-site && pnpm build",
+    "build:reservation": "cd apps/reservation-dashboard && pnpm build",
+    "build:upload": "cd apps/upload-dashboard && pnpm build",
+    "build:all": "pnpm run build:listings && pnpm run build:reservation && pnpm run build:upload",
+    "dev:listings": "cd apps/listings-site && pnpm dev",
+    "dev:reservation": "cd apps/reservation-dashboard && pnpm dev",
+    "dev:upload": "cd apps/upload-dashboard && pnpm dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.4",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.3"
+  }
+}

@@ -1,0 +1,19 @@
+# Ignore development and debug files
+*.sql
+**/debug_*.sql
+**/test_*.sql
+**/fix_*.sql
+**/*debug*
+**/*test*
+**/page-backup.tsx
+**/page-temp.tsx
+**/page-broken.tsx
+**/page-simple.tsx
+
+# Ignore documentation
+README.md
+*.md
+
+# Ignore local development files
+.env.local
+.env.development

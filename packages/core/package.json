@@ -1,0 +1,12 @@
+{
+  "name": "@rental/core",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Core rental platform functionality - most commonly used exports",
+  "dependencies": {
+    "@rental/types": "workspace:*",
+    "@rental/supabase": "workspace:*",
+    "@rental/google-maps": "workspace:*"
+  }
+}
