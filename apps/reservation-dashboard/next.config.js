@@ -1,38 +1,45 @@
-const path = require('path');
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Webpack configuration for monorepo shared types
-  webpack: (config) => {
-    config.resolve.alias = {
-  ...config.resolve.alias,
-  '@rental/types': path.resolve(__dirname, '../../packages/types/src'),
-  '@rental/google-maps': path.resolve(__dirname, '../../packages/google-maps/src'),
-  '@rental/supabase': path.resolve(__dirname, '../../packages/supabase/src'),
-  '@rental/image-handling': path.resolve(__dirname, '../../packages/image-handling/src'),
-};
-    return config;
-  },
+// apps/reservation-dashboard/next.config.js
+module.exports = {
+  // Use basePath only in production when serving from subpath
+  basePath: process.env.NODE_ENV === 'production' ? '/reservations' : '',
   
-  // Transpile shared packages
-  transpilePackages: ['@rental/types', '@rental/google-maps', '@rental/supabase', '@rental/image-handling'],
+  // Asset prefix for CDN support (optional)
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/reservations' : '',
   
+  // Other Next.js config options
+  reactStrictMode: true,
+  swcMinify: true,
+  
+  // Handle images from external sources
   images: {
     domains: [
-      'spaindreamhome.com',
-      'supabase.com',
+      'localhost',
+      'studentrentals.es',
+      // Add your Supabase storage domain
       'your-supabase-project.supabase.co',
-      'img.studentrentals.es',
-      'studentrentals.es'
     ],
   },
+  
+  // Environment variables
   env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-  }
+    NEXT_PUBLIC_LISTINGS_URL: process.env.NODE_ENV === 'production' 
+      ? 'https://studentrentals.es' 
+      : 'http://localhost:3000',
+  },
+  
+  // Redirect old routes if needed
+  async redirects() {
+    return [
+      {
+        source: '/ReservationDashboard/dashboard',
+        destination: '/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/ReservationDashboard',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
 }
-
-module.exports = nextConfig

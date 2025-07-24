@@ -59,34 +59,30 @@ async function fetchProperties(
     }
 
     if (searchParams.city) {
-      query = query.ilike("address", `%${searchParams.city}%`);
+      query = query.ilike("city", `%${searchParams.city}%`);
     }
 
-    // Note: Using actual column names from the database
-    // The database might have different column names than expected
-    // TODO: Ensure database has the correct columns
-    
-    // For now, comment out these filters until we confirm column names
-    // if (searchParams.beds) {
-    //   const bedsNum = parseInt(searchParams.beds);
-    //   if (!isNaN(bedsNum) && bedsNum > 0) {
-    //     query = query.gte("rooms", bedsNum);
-    //   }
-    // }
+    // Fixed: Using correct column names from database
+    if (searchParams.beds) {
+      const bedsNum = parseInt(searchParams.beds);
+      if (!isNaN(bedsNum) && bedsNum > 0) {
+        query = query.gte("beds", bedsNum);
+      }
+    }
 
-    // if (searchParams.baths) {
-    //   const bathsNum = parseInt(searchParams.baths);
-    //   if (!isNaN(bathsNum) && bathsNum > 0) {
-    //     query = query.gte("bathrooms", bathsNum);
-    //   }
-    // }
+    if (searchParams.baths) {
+      const bathsNum = parseInt(searchParams.baths);
+      if (!isNaN(bathsNum) && bathsNum > 0) {
+        query = query.gte("baths", bathsNum);
+      }
+    }
 
     if (searchParams.priceRange && searchParams.priceRange.includes("-")) {
       const [minPriceStr, maxPriceStr] = searchParams.priceRange.split("-");
       const minPrice = parseInt(minPriceStr);
       const maxPrice = parseInt(maxPriceStr);
 
-      if (!isNaN(minPrice) && minPrice > 0) {
+      if (!isNaN(minPrice) && minPrice >= 0) {
         query = query.gte("price", minPrice);
       }
       if (!isNaN(maxPrice) && maxPrice < 9999999) {
@@ -97,6 +93,14 @@ async function fetchProperties(
     if (searchParams.propertyId) {
       query = query.eq("id", searchParams.propertyId);
     }
+
+    // Add saleOrRent filter if you have this column in your database
+    // Uncomment when you add the sale_or_rent column to your properties table
+    /*
+    if (searchParams.saleOrRent) {
+      query = query.eq("sale_or_rent", searchParams.saleOrRent);
+    }
+    */
 
     // For map view, fetch all properties (no pagination) to show on map
     // For list view, apply pagination

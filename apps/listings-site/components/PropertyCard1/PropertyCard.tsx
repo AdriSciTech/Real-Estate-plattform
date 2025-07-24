@@ -1,4 +1,4 @@
-// apps\listings-site\listings-plattform\components\PropertyCard1\PropertyCard.tsx
+// apps/listings-site/listings-plattform/components/PropertyCard1/PropertyCard.tsx
 "use client";
 
 import { Property } from '@rental/types';
@@ -10,7 +10,7 @@ import ImageCarousel from "./ImageCarousel";
 interface PropertyCardProps {
   property: Property;
   priority?: boolean;
-  index?: number; // Add index to props
+  index?: number;
 }
 
 export default function PropertyCard({ property, priority = false, index = 0 }: PropertyCardProps) {
@@ -65,7 +65,7 @@ export default function PropertyCard({ property, priority = false, index = 0 }: 
       priceFrequency: 'month',
       bedrooms: property.beds?.toString() || '0',
       beds: property.beds?.toString() || '0',
-      rooms: property.beds?.toString() || '0', // Some dashboards expect 'rooms'
+      rooms: property.beds?.toString() || '0',
       bathrooms: property.baths?.toString() || '0',
       baths: property.baths?.toString() || '0',
       size: property.area ? `${property.area} m²` : 'N/A',
@@ -89,10 +89,17 @@ export default function PropertyCard({ property, priority = false, index = 0 }: 
     // Store property data in localStorage for the reservation dashboard
     localStorage.setItem('selectedProperty', JSON.stringify(propertyData));
     
-    // Also pass propertyId as URL parameter for quick reference
+    // Also store propertyId separately for quick reference
+    localStorage.setItem('bookingPropertyId', property.id || '');
+    
+    // Create URL parameters
     const params = new URLSearchParams({
-      propertyId: property.id || ''
+      propertyId: property.id || '',
+      source: 'listings'
     });
+    
+    // Store the params in localStorage as well (for persistence across auth redirects)
+    localStorage.setItem('propertyParams', params.toString());
     
     // Determine the reservation dashboard URL
     const isDevelopment = window.location.hostname === 'localhost';
@@ -100,20 +107,27 @@ export default function PropertyCard({ property, priority = false, index = 0 }: 
     
     if (isDevelopment) {
       // In development, reservation dashboard runs on port 3001
-      reservationDashboardUrl = `http://localhost:3001/ReservationDashboard/dashboard?${params.toString()}`;
+      // Navigate to the dashboard page directly (not /ReservationDashboard/dashboard)
+      reservationDashboardUrl = `http://localhost:3001/dashboard?${params.toString()}`;
     } else {
-      // In production, both apps are on studentrentals.es
-      // Reservation dashboard is served from /ReservationDashboard path
-      reservationDashboardUrl = `/ReservationDashboard/dashboard?${params.toString()}`;
+      // In production, the reservation dashboard should be accessible via a subdomain or path
+      // Adjust this based on your production setup
+      const productionHost = window.location.hostname;
+      
+      // Option 1: Subdomain approach (e.g., reservations.studentrentals.es)
+      // reservationDashboardUrl = `https://reservations.${productionHost}/dashboard?${params.toString()}`;
+      
+      // Option 2: Subpath approach (if both apps are served from the same domain)
+      // This requires proper nginx/server configuration
+      reservationDashboardUrl = `https://${productionHost}/reservations/dashboard?${params.toString()}`;
+      
+      // Option 3: Different domain entirely
+      // reservationDashboardUrl = `https://reservations.studentrentals.es/dashboard?${params.toString()}`;
     }
     
-    // Try to open the reservation dashboard
-    const newWindow = window.open(reservationDashboardUrl, '_blank');
-    
-    // If the window couldn't open (popup blocked), show an alert
-    if (!newWindow) {
-      alert('Please allow popups to open the reservation dashboard. You can also navigate to the reservation dashboard manually.');
-    }
+    // Navigate to the reservation dashboard
+    // Using window.location instead of window.open for better UX
+    window.location.href = reservationDashboardUrl;
   };
 
   return (

@@ -1,210 +1,143 @@
-// app/ReservationDashboard/dashboard/hooks/usePropertyManager.tsx
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../../../lib/supabase";
-import { Property, getPropertyDisplayData, validateProperty } from "../../../lib/types/property";
+// app/dashboard/hooks/usePropertyManager.ts
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Property } from '../../../lib/types/property';
 
-// Import PropertyData from types/index.ts instead of redefining it
-import { PropertyData as BasePropertyData } from "../../../types";
-
-// Extend the base PropertyData with additional fields specific to this hook
-export interface PropertyData extends BasePropertyData {
-  address: string;
-  city: string;
-  availability?: string;
-  depositAmount?: number;
-  utilitiesIncluded?: boolean;
-  furnished?: boolean;
-  description?: string;
-  amenities?: string[];
-  nearbyPlaces?: string[];
-}
-
-export const usePropertyManager = (router: any, activeTab: string) => {
+export function usePropertyManager(router: any, activeTab: string) {
   const searchParams = useSearchParams();
-  const [property, setProperty] = useState<PropertyData | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
   const [isPropertyReserved, setIsPropertyReserved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get property ID from URL params
-  const propertyId = searchParams.get('propertyId') || searchParams.get('id');
-
-  // Debug logging
   useEffect(() => {
-    console.log('usePropertyManager - propertyId:', propertyId);
-    console.log('usePropertyManager - searchParams:', Object.fromEntries(searchParams.entries()));
-  }, [propertyId, searchParams]);
+    const loadProperty = async () => {
+      setLoading(true);
+      setError(null);
 
-  // Fetch property data from Supabase
-  useEffect(() => {
-    const fetchProperty = async () => {
-      // If no property ID, check localStorage for saved property
-      if (!propertyId) {
-        console.log('No propertyId in URL, checking localStorage...');
+      try {
+        // First, check URL parameters
+        const propertyId = searchParams.get('propertyId');
+        const source = searchParams.get('source');
         
-        // Check if there's a saved property from navigation
-        const savedPropertyStr = localStorage.getItem('selectedProperty');
-        if (savedPropertyStr) {
+        // Then check localStorage for property data
+        const storedPropertyData = localStorage.getItem('selectedProperty');
+        const storedPropertyId = localStorage.getItem('bookingPropertyId');
+        
+        if (storedPropertyData) {
           try {
-            const savedProperty = JSON.parse(savedPropertyStr);
-            console.log('Found saved property:', savedProperty);
+            const parsedProperty = JSON.parse(storedPropertyData);
             
-            // Transform saved property to match PropertyData format
-            const transformedProperty: PropertyData = {
-              id: savedProperty.id,
-              title: savedProperty.title || 'Untitled Property',
-              address: savedProperty.address || savedProperty.location || 'Unknown Location',
-              city: savedProperty.location || 'Unknown City',
-              price: (savedProperty.price || 0).toString(),
-              displayPrice: `€${(savedProperty.price || 0).toLocaleString()}`,
-              priceFrequency: 'month',
-              rooms: (savedProperty.bedrooms || savedProperty.beds || 0).toString(),
-              bathrooms: (savedProperty.bathrooms || savedProperty.baths || 0).toString(),
-              size: savedProperty.area ? `${savedProperty.area} m²` : undefined,
-              featuredImage: savedProperty.images?.[0] || '/placeholder-property.jpg',
-              galleryImages: savedProperty.images || [],
-              url: `/property/${savedProperty.id}`,
-              availability: 'Available',
-              depositAmount: (savedProperty.price || 0) * 2,
-              utilitiesIncluded: false,
-              furnished: true,
-              description: savedProperty.description,
-              amenities: [],
-              nearbyPlaces: []
+            // Transform the property data to match the expected format
+            const transformedProperty: Property = {
+              id: parsedProperty.id,
+              title: parsedProperty.title,
+              address: parsedProperty.address,
+              city: parsedProperty.city || parsedProperty.address?.split(',').pop()?.trim() || 'Unknown City',
+              price: typeof parsedProperty.price === 'string' ? parseFloat(parsedProperty.price) : parsedProperty.price,
+              displayPrice: parsedProperty.displayPrice,
+              priceFrequency: parsedProperty.priceFrequency || 'month',
+              bedrooms: parsedProperty.bedrooms || parsedProperty.beds,
+              beds: parsedProperty.beds || parsedProperty.bedrooms,
+              rooms: parsedProperty.rooms || parsedProperty.bedrooms || parsedProperty.beds,
+              bathrooms: parsedProperty.bathrooms || parsedProperty.baths,
+              baths: parsedProperty.baths || parsedProperty.bathrooms,
+              size: parsedProperty.size || (parsedProperty.area ? `${parsedProperty.area} m²` : 'N/A'),
+              area: parsedProperty.area,
+              propertyType: parsedProperty.propertyType || parsedProperty.type || 'Apartment',
+              location: parsedProperty.location || parsedProperty.address,
+              featuredImage: parsedProperty.featuredImage || parsedProperty.imageUrl || '/placeholder-property.jpg',
+              images: parsedProperty.images || parsedProperty.galleryImages || [],
+              imageUrl: parsedProperty.imageUrl || parsedProperty.featuredImage || '/placeholder-property.jpg',
+              url: parsedProperty.url || `/properties/${parsedProperty.id}`,
+              available: parsedProperty.available !== false,
+              description: parsedProperty.description || '',
+              // Preserve additional fields
+              lat: parsedProperty.lat,
+              lng: parsedProperty.lng,
+              created_at: parsedProperty.created_at,
+              updated_at: parsedProperty.updated_at,
+              amenities: parsedProperty.amenities || [],
+              nearbyPlaces: parsedProperty.nearbyPlaces || []
             };
             
             setProperty(transformedProperty);
-            setLoading(false);
-            return;
-          } catch (err) {
-            console.error('Error parsing saved property:', err);
+            
+            // Clean up localStorage after successful load
+            localStorage.removeItem('selectedProperty');
+            
+            // Check if the property is already reserved
+            const reservedProperties = localStorage.getItem('reservedProperties');
+            if (reservedProperties) {
+              const reserved = JSON.parse(reservedProperties);
+              if (reserved.includes(parsedProperty.id)) {
+                setIsPropertyReserved(true);
+              }
+            }
+          } catch (parseError) {
+            console.error('Error parsing stored property data:', parseError);
+            setError('Invalid property data format');
           }
-        }
-        
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        console.log('Fetching property from Supabase with ID:', propertyId);
-
-        // supabase is already initialized and imported
-        if (!supabase) {
-          setError('Unable to connect to database');
-          setLoading(false);
-          return;
-        }
-
-        const { data, error: fetchError } = await supabase
-          .from('properties')
-          .select('*')
-          .eq('id', propertyId)
-          .single();
-
-        console.log('Supabase response:', { data, error: fetchError });
-
-        if (fetchError) {
-          console.error('Error fetching property:', fetchError);
-          setError('Failed to load property');
+        } else if (propertyId) {
+          // If no stored data but we have a propertyId, we could fetch from the API
+          // For now, we'll show an error since we don't have the property details
+          setError('Property details not found. Please select a property from the listings.');
+        } else {
+          // No property selected
           setProperty(null);
-        } else if (data) {
-          // Validate the property data
-          const validationResult = validateProperty(data);
-          
-          if (!validationResult.isValid || !validationResult.property) {
-            setError('Invalid property data');
-            return;
-          }
-
-          const validProperty = validationResult.property;
-          const displayData = getPropertyDisplayData(validProperty);
-
-          // Transform to PropertyData format for backward compatibility
-          const transformedProperty: PropertyData = {
-            id: validProperty.id,
-            title: displayData.title,
-            address: displayData.address,
-            city: validProperty.address?.split(',').pop()?.trim() || 'Unknown',
-            price: displayData.price.toString(),
-            displayPrice: `€${displayData.price.toLocaleString()}`,
-            priceFrequency: 'month',
-            rooms: validProperty.rooms?.toString(),
-            bathrooms: validProperty.bathrooms?.toString(),
-            size: validProperty.size,
-            featuredImage: displayData.primaryImage?.medium || '/placeholder-property.jpg',
-            galleryImages: validProperty.images?.map(img => img.full) || 
-                   validProperty.image_urls || 
-                   [],
-            url: `/property/${validProperty.id}`,
-            availability: validProperty.available ? 'Available' : 'Not Available',
-            depositAmount: displayData.price * 2, // Assume 2 months deposit
-            utilitiesIncluded: false,
-            furnished: true,
-            description: validProperty.description,
-            amenities: [],
-            nearbyPlaces: []
-          };
-
-          setProperty(transformedProperty);
-          console.log('Property set successfully:', transformedProperty);
         }
       } catch (err) {
-        console.error('Unexpected error:', err);
-        setError('An unexpected error occurred');
+        console.error('Error loading property:', err);
+        setError('Failed to load property details');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProperty();
-  }, [propertyId]);
-
-  // Check if property is reserved (from localStorage or user data)
-  useEffect(() => {
-    const checkReservationStatus = () => {
-      const reservedPropertyId = localStorage.getItem("reservedPropertyId");
-      if (property && property.id && reservedPropertyId === property.id) {
-        setIsPropertyReserved(true);
-      }
-    };
-
-    checkReservationStatus();
-  }, [property]);
+    loadProperty();
+  }, [searchParams]);
 
   const handleReserveProperty = () => {
     if (!property) return null;
 
-    localStorage.setItem("reservedPropertyId", property.id);
-    localStorage.setItem("reservedProperty", JSON.stringify(property));
+    // Mark property as reserved
     setIsPropertyReserved(true);
-    return "reserved";
+    
+    // Store in localStorage
+    const reservedProperties = localStorage.getItem('reservedProperties');
+    const reserved = reservedProperties ? JSON.parse(reservedProperties) : [];
+    if (!reserved.includes(property.id)) {
+      reserved.push(property.id);
+      localStorage.setItem('reservedProperties', JSON.stringify(reserved));
+    }
+    
+    // Store the reserved property details
+    localStorage.setItem('reservedProperty', JSON.stringify(property));
+    
+    return 'reserved'; // Return the tab to navigate to
   };
 
   const handleFindAnotherProperty = () => {
-    // Clear any saved property data
-    localStorage.removeItem("selectedProperty");
-    localStorage.removeItem("propertyParams");
+    // Clear current property
+    setProperty(null);
+    setIsPropertyReserved(false);
+    localStorage.removeItem('bookingPropertyId');
+    localStorage.removeItem('propertyParams');
     
-    // Navigate back to property search
-    router.push("/properties");
-  };
-
-  const formatPrice = (price: string) => {
-    const numPrice = parseFloat(price);
-    if (isNaN(numPrice)) return price;
-    return `€${numPrice.toLocaleString()}`;
-  };
-
-  // Load property from localStorage if available (for manual testing)
-  const loadProperty = () => {
-    const savedPropertyStr = localStorage.getItem('selectedProperty');
-    if (savedPropertyStr) {
-      const savedProperty = JSON.parse(savedPropertyStr);
-      window.location.href = `/ReservationDashboard/dashboard?propertyId=${savedProperty.id}`;
+    // Redirect back to listings site
+    const isDevelopment = window.location.hostname === 'localhost';
+    if (isDevelopment) {
+      window.location.href = 'http://localhost:3000';
+    } else {
+      // Adjust based on your production setup
+      window.location.href = 'https://studentrentals.es';
     }
+  };
+
+  const formatPrice = (price?: number | string) => {
+    if (!price) return 'Price on request';
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return `€${numPrice.toLocaleString('de-DE')}`;
   };
 
   return {
@@ -214,7 +147,6 @@ export const usePropertyManager = (router: any, activeTab: string) => {
     handleFindAnotherProperty,
     formatPrice,
     loading,
-    error,
-    loadProperty // Export for debugging
+    error
   };
-};
+}
